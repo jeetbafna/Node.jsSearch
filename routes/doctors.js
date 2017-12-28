@@ -9,7 +9,19 @@ client.connect(function(err,result){
 
 
 router.get('/', function(req, res, next) {
-	var query = "SELECT * FROM findadoc.doctors";
+	if(req.query.state){
+		var query = "SELECT * FROM findadoc.doctors WHERE state = ?";
+	client.execute(query, [req.query.state], function(err, results){
+		if(err){
+			res.status(404).send({msg: err});
+		} else{
+			res.render('doctors', {
+				doctors: results.rows
+			});
+		}
+	});
+	} else{
+		var query = "SELECT * FROM findadoc.doctors";
 	client.execute(query, [], function(err, results){
 		if(err){
 			res.status(404).send({msg: err});
@@ -19,7 +31,8 @@ router.get('/', function(req, res, next) {
 			});
 		}
 	});
-  
+	}
+	  
 });
 
 router.get('/details/:id', function(req, res, next) {
@@ -50,7 +63,39 @@ router.get('/category/:name', function(req, res, next) {
   
 });
 router.get('/add', function(req, res, next) {
-  res.render('add-doctors');
+  var query = "SELECT * FROM findadoc.categories";
+	client.execute(query, [], function(err, results){
+		if(err){
+			res.status(404).send({msg: err});
+		} else{
+			res.render('add-doctors', {
+				categories: results.rows
+			});
+		}
+	});
+});
+
+router.post('/add', function(req, res, next) {
+  var doc_id = cassandra.types.uuid();
+  var query = "INSERT INTO findadoc.doctors(doc_id, full_name, category, new_patients, graduation_year, practice_name, street_address, city, state)VALUES(?,?,?,?,?,?,?,?,?)";
+  client.execute(query,
+   [doc_id,
+   req.body.full_name,
+   req.body.category,
+   req.body.new_patients,
+   req.body.graduation_year,
+   req.body.practice_name,
+   req.body.street_address,
+   req.body.city,
+   req.body.state], {prepare: true}, function(err, result){
+   	if(err){
+   		res.status(404).send({msg: err});
+   	} else{
+   		
+   		res.location('/doctors');
+   		res.redirect('/doctors');
+   	}
+   });
 });
 
 module.exports = router;
