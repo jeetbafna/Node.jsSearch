@@ -2,6 +2,13 @@ var express = require('express');
 var path = require('path');
 var exphbs = require('express-handlebars');
 var bodyParser = require('body-parser');
+var cassandra = require('cassandra-driver');
+
+var client = new cassandra.Client({contactPoints:['127.0.0.1']});
+client.connect(function(err,result){
+	
+});
+
 
 var routes = require('./routes/index');
 var doctors = require('./routes/doctors');
@@ -17,6 +24,15 @@ app.set('view engine', 'handlebars');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+var query = "SELECT * FROM findadoc.categories";
+client.execute(query, [], function(err, results){
+	if(err){
+		res.status(404).send({msg: err});
+	} else{
+		app.locals.cats = results.rows;
+	}
+});
 
 app.use('/', routes);
 app.use('/doctors', doctors);
